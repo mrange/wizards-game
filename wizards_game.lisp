@@ -1,3 +1,6 @@
+;;;; This code has been copied verbatim from the Land of Lisp book source code set
+;;;; Please respect all applicable rights and reservations...and I hope the author 
+;;;; doesn't object to this little mini-project. 
 (defparameter *nodes* '((living-room (you are in the living-room.
                             a wizard is snoring loudly on the couch.))
                         (garden (you are in a beautiful garden.
