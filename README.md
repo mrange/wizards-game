@@ -1,4 +1,7 @@
 wizards-game
 ============
 
-The Land of List Wizards Game - in various languages for comparison
+The book "Land of Lisp" uses a simple text based game as an example when teaching the reader the lisp programming language. 
+
+As an experiment, I wanted to see how that code would look in other languages. That is what this repository is about. 
+
