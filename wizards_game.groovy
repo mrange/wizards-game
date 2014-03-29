@@ -46,7 +46,7 @@ def walk(direction) {
 def pickup(object) {
 	if (object in objectLocations[location]) {
 		objectLocations[location] -= object
-		objectLocations.body << object
+		objectLocations.body      += object
 		"You are now carrying the $object"
 	} else {
 		"You cannot get that."
