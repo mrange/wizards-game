@@ -1,15 +1,15 @@
 
-nodes = [livingRoom: "You are in the living room.\nA wizard is snoring loudly on the couch\n", 
-         garden:     "You are in a beautiful garden.\nThere is a well in front of you\n", 
-         attic:      "You are in the attic.\nThere is a giant welding torch in the corner\n"]
+nodes           = [livingRoom: "You are in the living room.\nA wizard is snoring loudly on the couch\n", 
+                   garden:     "You are in a beautiful garden.\nThere is a well in front of you\n", 
+                   attic:      "You are in the attic.\nThere is a giant welding torch in the corner\n"]
 
-edges = [livingRoom: [garden:     ['west',       'door'], 
-                      attic:      ['upstairs',   'ladder']],
-         garden:     [livingRoom: ['east',       'door']], 
-         attic:      [livingRoom: ['downstairs', 'ladder']]]
+edges           = [livingRoom: [garden:     ['west',       'door'], 
+                                attic:      ['upstairs',   'ladder']],
+                   garden:     [livingRoom: ['east',       'door']], 
+                   attic:      [livingRoom: ['downstairs', 'ladder']]]
 
 objectLocations = [livingRoom: ['whiskey', 'bucket'], 
-                   garden: ['chain', 'frog']].withDefault { [] }
+                   garden:     ['chain', 'frog']].withDefault { [] }
 
 allowedCommands = ['look', 'walk', 'pickup', 'inventory']
 
@@ -56,6 +56,7 @@ def pickup(object) {
 def inventory() { "items- ${objectLocations.body.join(', ')}" }
 
 def gameRepl() {
+	println "\n${look()}\n" 
 	while ((cmd = gameRead()) != 'quit') { println gameEval(cmd) + "\n" } 
 }
 
@@ -68,4 +69,4 @@ def gameEval(cmd) {
 	Eval.me 'g', this, "g.$cmd"
 }
 
-def gameRead() { System.console().readLine(": ") }
+def gameRead() { System.console().readLine("~> ") }

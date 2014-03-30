@@ -1,6 +1,9 @@
 ;;;; This code has been copied verbatim from the Land of Lisp book source code set
-;;;; Please respect all applicable rights and reservations...and I hope the author 
-;;;; doesn't object to this little mini-project. 
+;;;; Please respect all applicable rights and reservations...and I humbly beg 
+;;;; my pardon if the author objects to this little project. If so, let me know
+;;;; and I will remove any and all references to the source code in question. 
+;;;;
+;;;; Humbly, Matias Bjarland
 (defparameter *nodes* '((living-room (you are in the living-room.
                             a wizard is snoring loudly on the couch.))
                         (garden (you are in a beautiful garden.
