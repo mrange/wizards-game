@@ -8,6 +8,8 @@ let linesToString (lines : seq<string>)     =   let sb = StringBuilder()
                                                 sb.ToString()
 let printLines (lines : seq<string>)        =   printf "%s" <| linesToString lines
 
+let cleanString (s : string) = s.ToLowerInvariant().Trim()
+
 (* Some keys that identifies objects, rooms and exits *)
 type RoomKey        = LivingRoom | Garden | Attic
 type ObjectKey      = Whiskey | Bucket | Chain | Frog
@@ -29,7 +31,7 @@ let nodes =
     [
         LivingRoom  , "You are in the living room.\nA wizard is snoring loudly on the couch\n"
         Garden      , "You are in a beautiful garden.\nThere is a well in front of you\n"
-        LivingRoom  , "You are in the attic.\nThere is a giant welding torch in the corner\n"
+        Attic       , "You are in the attic.\nThere is a giant welding torch in the corner\n"
     ] |> Map.ofList
 
 let edges =
@@ -59,15 +61,15 @@ let objectAliases =
         "bucket"    , Bucket
         "chain"     , Chain
         "frog"      , Frog
-    ] |> List.map (fun (k,v) -> k.ToLowerInvariant(),v) |> Map.ofList
+    ] |> List.map (fun (k,v) -> (k |> cleanString),v) |> Map.ofList
 
 let directionAliases =
     [
         "west"      , West
         "upstairs"  , Upstairs
         "east"      , East
-        "upstairs"  , Upstairs
-    ] |> List.map (fun (k,v) -> k.ToLowerInvariant(),v) |> Map.ofList
+        "downstairs", Downstairs
+    ] |> List.map (fun (k,v) -> (k |> cleanString),v) |> Map.ofList
 
 let inv = [] |> ObjectSet.New
 
@@ -85,7 +87,7 @@ let look () =
 let walk direction =
     let next =  edges.[location] |> Seq.tryFind (fun kv -> let dir, _ = kv.Value in direction = dir)
     match next with
-    | None      ->  printf "You cannot go that way."
+    | None      ->  printfn "You cannot go that way."
     | Some kv   ->  location <- kv.Key
                     look ()
 
@@ -102,10 +104,10 @@ let inventory () =
     [
         yield "You are carrying:"
         if inv.Objects.IsEmpty then
-            yield "Nothing"
+            yield "  Nothing"
         else
             for o in inv.Objects do
-            yield sprintf "A %A" o
+            yield sprintf "  A %A" o
     ] |> printLines
 
 let commands =
@@ -120,10 +122,10 @@ let commands =
                                     match d with
                                     | None  -> printfn "You can't walk that way"
                                     | Some d-> walk d
-    ] |> List.map (fun (k,v) -> (sprintf "%A" k).ToLowerInvariant(),v) |> Map.ofList
+    ] |> List.map (fun (k,v) -> (sprintf "%A" k |> cleanString),v) |> Map.ofList
 
 let acceptLine (line : string) =
-    let line = line.ToLowerInvariant()
+    let line = line |> cleanString
     if line = "quit" then true
     else
         let args = line.Split ' '
