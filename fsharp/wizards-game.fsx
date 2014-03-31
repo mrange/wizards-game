@@ -15,15 +15,15 @@ type CommandKey     = Look | Walk | Pickup | Inventory
 type ExitKey        = Door | Ladder
 type DirectionKey   = West | Upstairs | East | Downstairs
 
-(* F# is typically promotes immutable so define a mutablew object set *)
+(* F# typically promotes immutability but we need a mutable object set *)
 type ObjectSet =
     {
         mutable Objects : Set<ObjectKey>
     }
-    static member New o = {Objects = o |> Set.ofList}
-    member x.Has o      = x.Objects.Contains o
-    member x.Add o      = x.Objects <- x.Objects.Add o
-    member x.Remove o   = x.Objects <- x.Objects.Remove o
+    static member New os    = {Objects = os |> Set.ofList}
+    member x.Has o          = x.Objects.Contains o
+    member x.Add o          = x.Objects <- x.Objects.Add o
+    member x.Remove o       = x.Objects <- x.Objects.Remove o
 
 let nodes =
     [
@@ -50,6 +50,7 @@ let objectLocations =
     [
         LivingRoom  ,   [Whiskey; Bucket]   |> ObjectSet.New
         Garden      ,   [Chain  ; Frog]     |> ObjectSet.New
+        Attic       ,   []                  |> ObjectSet.New
     ] |> Map.ofList
 
 let objectAliases =
@@ -107,7 +108,7 @@ let inventory () =
             yield sprintf "A %A" o
     ] |> printLines
 
-let commands : Map<string, string->unit>=
+let commands =
     [
         Look        ,   fun s ->    look()
         Inventory   ,   fun s ->    inventory()
