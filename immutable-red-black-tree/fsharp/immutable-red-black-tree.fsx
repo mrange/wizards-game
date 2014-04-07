@@ -73,12 +73,13 @@ let test testRun (testSet : int list) =
 
     let unique = testSet |> Seq.distinct |> List.ofSeq
 
-    let rbt = testSet |> Seq.map (fun v -> v,()) |> RedBlackTree.ofSeq
+    let rbt = testSet |> Seq.map (fun v -> v,v) |> RedBlackTree.ofSeq
 
     for v in testSet do
         match rbt |> RedBlackTree.tryFind v with
-        | None  -> printfn "FAILED: %d not found in tree" v
-        | _     -> ()
+        | None              -> printfn "FAILED: %d not found in tree" v
+        | Some o when o<>v  -> printfn "FAILED: %d found in tree but wrong value %d<>%d" v v o
+        | Some o            -> ()
 
     let length = rbt |> RedBlackTree.length
     if unique.Length <> length then
