@@ -78,7 +78,7 @@ let test testRun (testSet : int list) =
     for v in testSet do
         match rbt |> RedBlackTree.tryFind v with
         | None              -> printfn "FAILED: %d not found in tree" v
-        | Some o when o<>2*v-> printfn "FAILED: %d found in tree but wrong value %d<>%d" v v o
+        | Some o when o<>2*v-> printfn "FAILED: %d found in tree but wrong value %d<>%d" v o (2*v)
         | Some o            -> ()
 
     let length = rbt |> RedBlackTree.length
