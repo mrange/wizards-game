@@ -73,12 +73,12 @@ let test testRun (testSet : int list) =
 
     let unique = testSet |> Seq.distinct |> List.ofSeq
 
-    let rbt = testSet |> Seq.map (fun v -> v,v) |> RedBlackTree.ofSeq
+    let rbt = testSet |> Seq.map (fun v -> v,2*v) |> RedBlackTree.ofSeq
 
     for v in testSet do
         match rbt |> RedBlackTree.tryFind v with
         | None              -> printfn "FAILED: %d not found in tree" v
-        | Some o when o<>v  -> printfn "FAILED: %d found in tree but wrong value %d<>%d" v v o
+        | Some o when o<>2*v-> printfn "FAILED: %d found in tree but wrong value %d<>%d" v v o
         | Some o            -> ()
 
     let length = rbt |> RedBlackTree.length
@@ -104,4 +104,4 @@ let r = Random 19740531
 printfn "%A" <| test "Manual" [31;41;59;26;53;58;97;93]
 for testRun in 0..10 do
     let length = r.Next(1000,2000)
-    ignore <| test (sprintf "Generated: %d" testRun) [for i in 0..length -> r.Next()]
+    ignore <| test (sprintf "Generated: %d" testRun) [for i in 0..length -> r.Next(0, 10000)]
