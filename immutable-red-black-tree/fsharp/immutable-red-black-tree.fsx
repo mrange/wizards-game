@@ -1,5 +1,4 @@
 ﻿// From Purely functional datastructures by Chris Okasaki
-
 module RedBlackTree =
     open System
 
@@ -8,8 +7,8 @@ module RedBlackTree =
         | Black
 
     type Tree<'TKey, 'TValue when 'TKey :> IComparable<'TKey>> =
-        | Node  of Color*'TKey*'TValue*Tree<'TKey, 'TValue>*Tree<'TKey, 'TValue>
         | Empty
+        | Node  of Color*'TKey*'TValue*Tree<'TKey, 'TValue>*Tree<'TKey, 'TValue>
 
     let rec tryFind (k : 'TKey) (t : Tree<'TKey, 'TValue>) =
         match t with
@@ -19,7 +18,7 @@ module RedBlackTree =
                                 | n when n < 0  -> tryFind k l
                                 | _             -> tryFind k r
 
-    module Details =
+    let addOrReplace k v (t : Tree<'TKey, 'TValue>) =
         let lbalance (t : Tree<'TKey, 'TValue>) =
             match t with
             | Node (Black, zk, zv, Node (Red, yk, yv, Node (Red, xk, xv, a, b), c), d)
@@ -42,11 +41,9 @@ module RedBlackTree =
                                             | n when n < 0  -> Node (c, kk, vv, addOrReplace k v l, r) |> lbalance
                                             | _             -> Node (c, kk, vv, l, addOrReplace k v r) |> rbalance
 
-
-    let addOrReplace k v (t : Tree<'TKey, 'TValue>) =
-        match Details.addOrReplace k v t with
+        match addOrReplace k v t with
         | Node (_, kk ,vv, l, r)    -> Node (Black, kk ,vv, l, r)
-        | _                         -> failwith "impl should always return a tree"
+        | _                         -> failwith "addOrReplace should always return a tree"
 
     let rec length (t : Tree<'TKey, 'TValue>) =
         match t with
@@ -64,6 +61,18 @@ module RedBlackTree =
             t <- t |> addOrReplace k v
         t
 
+    let toList (t : Tree<'TKey, 'TValue>) =
+        let rec toList (xs : ('TKey*'TValue) list) (t : Tree<'TKey, 'TValue>) =
+            match t with
+            | Empty                     ->  xs
+            | Node (_, kk ,vv ,l ,r)    ->  let xs = r |> toList xs
+                                            let xs = (kk,vv)::xs
+                                            let xs = l |> toList xs
+                                            xs
+        toList [] t
+
+open System
+
 let test testRun (testSet : int list) =
 
     printfn "Running test run: %s" testRun
@@ -71,7 +80,7 @@ let test testRun (testSet : int list) =
     let log2 v = (v |> float |> log) / log 2.
     let asInt v = round v |> int
 
-    let unique = testSet |> Seq.distinct |> List.ofSeq
+    let unique = testSet |> Seq.distinct |> Seq.sort |> List.ofSeq
 
     let rbt = testSet |> Seq.map (fun v -> v,2*v) |> RedBlackTree.ofSeq
 
@@ -85,23 +94,28 @@ let test testRun (testSet : int list) =
     if unique.Length <> length then
         printfn "FAILED: Length mismatch: %d <> %d" unique.Length length
 
+    let rbts = rbt |> RedBlackTree.toList |> List.map (fun (k,_) -> k)
+    if unique <> rbts then
+        printfn "FAILED: unique <> rbts"
 
     let depth = rbt |> RedBlackTree.depth
     let minDepth = length |> log2 |> asInt
     let maxDepth = 2. * (length + 1 |> log2) |> asInt
 
     if minDepth > depth then
-        printfn "FAILED: minDepth exceeds depth"
+        printfn "FAILED: minDepth (%d) exceeds depth (%d)" minDepth depth
 
     if maxDepth < depth then
-        printfn "FAILED: maxDepth is lower than depth"
+        printfn "FAILED: maxDepth (%d) is lower than depth (%d)" maxDepth depth
 
     rbt
 
-open System
+let rbt = test "Manual" [31;41;59;26;53;58;97;93]
+printfn "List: %A" (rbt |> RedBlackTree.toList)
+printfn "Tree: %A" rbt
+ignore <| test "Sequential" [for i in 100..1000 -> i]
 
 let r = Random 19740531
-printfn "%A" <| test "Manual" [31;41;59;26;53;58;97;93]
 for testRun in 0..10 do
     let length = r.Next(1000,2000)
     ignore <| test (sprintf "Generated: %d" testRun) [for i in 0..length -> r.Next(0, 10000)]
