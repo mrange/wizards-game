@@ -13,8 +13,8 @@ module RedBlackTree =
     let rec tryFind (k : 'TKey) (t : Tree<'TKey, 'TValue>) =
         match t with
         | Empty             ->  None
-        | Node (_,kk,v,l,r) ->  match k.CompareTo(kk) with
-                                | 0             -> Some v
+        | Node (_,kk,vv,l,r)->  match k.CompareTo(kk) with
+                                | 0             -> Some vv
                                 | n when n < 0  -> tryFind k l
                                 | _             -> tryFind k r
 
