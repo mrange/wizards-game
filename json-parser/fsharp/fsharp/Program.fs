@@ -131,6 +131,9 @@ module JsonParser =
     let digit1To9 = satisfy <| fun ch -> ch >= '1' && ch <= '9'
     let (|Digit1To9|_|) = digit1To9
 
+    let makeNumber (sign : float) (d : int) (s : int) (i : int64) (f : float) (es : float) = 
+            sign * ((float d) * (pown 10. (int s)) + (float i) + f) * es
+    
     let rec jsonArray  : Parser<Json list> = function
         | Between (wsToken '[') (wsToken ']') (separatedBy jsonValue (wsToken ',')) pr -> Some pr
         | _ -> None
@@ -213,9 +216,6 @@ module JsonParser =
         | ps -> Some (1., ps)
     and (|JsonSign|_|) = jsonSign
    
-    and makeNumber (sign : float) (d : int) (s : int) (i : int64) (f : float) (es : float) = 
-            sign * ((float d) * (pown 10. (int s)) + (float i) + f) * es
-    
     and jsonNumber : Parser<float> = function
         | JsonSign (sign, Any ('0', JsonFraction (f, JsonExponentScale (es, ps))))                      -> Some (makeNumber sign 0 1 0L f es, ps)
         | JsonSign (sign, Json1To9 (d, JsonInteger ((i,s), JsonFraction (f, JsonExponentScale (es, ps)))))  -> Some (makeNumber sign d s i f es, ps)
