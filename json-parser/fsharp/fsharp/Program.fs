@@ -128,6 +128,9 @@ module JsonParser =
         | _ -> None
     let (|WsToken|_|) = wsToken
 
+    let digit1To9 = satisfy <| fun ch -> ch >= '1' && ch <= '9'
+    let (|Digit1To9|_|) = digit1To9
+
     let rec jsonArray  : Parser<Json list> = function
         | Between (wsToken '[') (wsToken ']') (separatedBy jsonValue (wsToken ',')) pr -> Some pr
         | _ -> None
@@ -166,10 +169,8 @@ module JsonParser =
         | _ -> None
     and (|JsonChar|_|) = jsonChar
 
-    and listAsString (cs : char list) = System.String (cs |> List.toArray)
-
     and jsonString : Parser<string> = function
-        | Between (token '"') (token '"') (many jsonChar) (cs, ps) -> Some (cs |> listAsString , ps)
+        | Between (token '"') (token '"') (many jsonChar) (cs, ps) -> Some (System.String (cs |> List.toArray) , ps)
         | _ -> None
     and (|JsonString|_|) = jsonString
 
@@ -201,9 +202,6 @@ module JsonParser =
         | Any ('.', JsonInteger ((i,s), ps)) -> Some ((float i) * pown 0.1 s, ps)
         | ps -> Some (0., ps)
     and (|JsonFraction|_|) = jsonFraction
-
-    and digit1To9 = satisfy <| fun ch -> ch >= '1' && ch <= '9'
-    and (|Digit1To9|_|) = digit1To9
 
     and json1To9 : Parser<int> = function 
         | Digit1To9 (ch, ps) -> Some (int <| digitToInt64 ch, ps)
