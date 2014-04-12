@@ -1,7 +1,7 @@
 ﻿open System
 
 module JsonParser =
-    (* Generic jsonr *)
+    (* Generic parser stuff*)
     [<Struct>]
     type ParserState(input : string, pos : int) =
 
@@ -35,12 +35,12 @@ module JsonParser =
                         isMatch <- t (input.[iter + pos]) iter
                         iter <- iter + 1
 
-                    if atLeast > iter then
+                    let matches = if isMatch then iter else iter - 1
+
+                    if atLeast > matches then
                         None
-                    elif isMatch then
-                        Some (input.Substring(pos, iter), ParserState (input, pos + iter))
                     else
-                        Some (input.Substring(pos, iter - 1), ParserState (input, pos + iter - 1))
+                        Some (input.Substring(pos, matches), ParserState (input, pos + matches))
 
     type ParserResult<'T>   = ('T*ParserState) option
     type Parser<'T>         = ParserState->ParserResult<'T>
@@ -73,8 +73,8 @@ module JsonParser =
     let digit = satisfy satisfyDigit
     let (|Digit|_|) = digit
 
-    let tokens (str : string) : Parser<string> = satisfyString str.Length str.Length <| fun ch i -> str.[i] = ch
-    let (|Tokens|_|) = tokens
+    let keyword (str : string) : Parser<string> = satisfyString str.Length str.Length <| fun ch i -> str.[i] = ch
+    let (|Keyword|_|) = keyword
 
     let whitespaces : Parser<string> = satisfyString 0 Int32.MaxValue <| fun ch i -> Char.IsWhiteSpace ch
     let (|Whitespaces|_|) = whitespaces
@@ -87,9 +87,13 @@ module JsonParser =
         | _ -> None
     let (|Between|_|) = between
     
-    let rec separatedBy ((|Element|_|) as element : Parser<'T>) ((|Separator|_|) as separator :  Parser<_>) : Parser<'T list> = function
-        | Element (v, Separator (_, SeparatedBy element separator (vs,ps))) -> Some (v::vs, ps)
-        | Element (v, ps) -> Some ([v], ps)
+    let rec separatedByNext ((|Element|_|) as element : Parser<'T>) ((|Separator|_|) as separator :  Parser<_>) : Parser<'T list> = function
+        | Separator (_, Element (v, SeparatedByNext element separator (vs,ps))) -> Some (v::vs, ps)
+        | ps -> Some ([], ps)
+    and (|SeparatedByNext|_|) = separatedByNext
+
+    and separatedBy ((|Element|_|) as element : Parser<'T>) ((|Separator|_|) as separator :  Parser<_>) : Parser<'T list> = function
+        | Element (v, SeparatedByNext element separator (vs,ps)) -> Some (v::vs, ps)
         | ps -> Some ([], ps)
     and (|SeparatedBy|_|) = separatedBy
 
@@ -98,7 +102,7 @@ module JsonParser =
         | ps -> Some ([], ps)
     and (|Many|_|) = many
 
-    (* JSON Specific *)
+    (* JSON *)
     type Json = 
         | Null
         | Boolean   of bool
@@ -179,12 +183,12 @@ module JsonParser =
     and (|JsonInteger|_|) = jsonInteger
 
     and jsonExponent : Parser<float> = function
-        | Tokens "e-"   (_,ps)  
-        | Tokens "E-"   (_,ps)  -> Some (0.1, ps)
-        | Tokens "e+"   (_,ps)  
-        | Tokens "E+"   (_,ps)  
+        | Keyword "e-"  (_,ps)  
+        | Keyword "E-"  (_,ps)  -> Some (0.1, ps)
+        | Keyword "e+"  (_,ps)  
+        | Keyword "E+"  (_,ps)  
         | Any           ('e',ps)  
-        | Any           ('e',ps)  -> Some (10., ps)
+        | Any           ('E',ps)  -> Some (10., ps)
         | _ -> None
     and (|JsonExponent|_|) = jsonExponent
     
@@ -221,9 +225,9 @@ module JsonParser =
     and (|JsonNumber|_|) = jsonNumber
 
     and jsonPreValue  : Parser<Json> = function
-        | Tokens    "null"  (_  ,ps)   -> Some (Null           , ps)
-        | Tokens    "true"  (_  ,ps)   -> Some (Boolean true   , ps)
-        | Tokens    "false" (_  ,ps)   -> Some (Boolean false  , ps)
+        | Keyword    "null" (_  ,ps)   -> Some (Null           , ps)
+        | Keyword    "true" (_  ,ps)   -> Some (Boolean true   , ps)
+        | Keyword    "false"(_  ,ps)   -> Some (Boolean false  , ps)
         | JsonArray         (vs ,ps)   -> Some (Array vs       , ps)
         | JsonObject        (ms ,ps)   -> Some (Object ms      , ps)
         | JsonString        (s  ,ps)   -> Some (String s       , ps)
@@ -253,12 +257,25 @@ module JsonParser =
         | _                 -> None
 
 
+open JsonParser                                
+
 [<EntryPoint>]
 let main argv = 
 
-    let jsons = 
+    let testCases = 
         [
-            """[]"""
+            """[1E2]"""                                         , Some <| Array [Number 100.]
+            """[1e+2]"""                                        , Some <| Array [Number 100.]
+            """[]"""                                            , Some <| Array []
+            """[false]"""                                       , Some <| Array [Boolean false]
+            """[1]"""                                           , Some <| Array [Number 1.]
+            """[0]"""                                           , Some <| Array [Number 0.]
+            """[-0]"""                                          , Some <| Array [Number 0.]
+            """[1]"""                                           , Some <| Array [Number 1.]
+            """[-1]"""                                          , Some <| Array [Number -1.]
+            """[01]"""                                          , None
+            """[-01]"""                                         , None
+            """[true,123 , null ,"Test\t", [true],{}]"""    , Some <| Array [Boolean true; Number 123.; Null; String "Test\t"; Array [Boolean true]; Object []]
             """
 { 
     "test"  :null   ,
@@ -267,15 +284,16 @@ let main argv =
     {
         "inner":  "heart:\u2665"
     }
-}"""
-            """[true,100.23E-1 , null ,"Test\t", [true],{}]"""
-            """[false]"""
+}"""                                                            , Some <| Object []
         ]
     
-    for json in jsons do
-        match JsonParser.parse json with
-        | None -> printfn "Parse of failed: %s" json
-        | Some v -> printfn "%A" <| v
+    for (testCase, testResult) in testCases do
+        match testResult, JsonParser.parse testCase with
+        | None, None                    -> ()
+        | Some tr, Some v   when tr = v -> ()
+        | Some tr, Some v               -> printfn "FAILED: Parse was successful but result is unexpected: %s\nExpected:\n%A\nActual:\n%A " testCase tr v
+        | None, Some v                  -> printfn "FAILED: Parse was successful but expected to fail: %s\nActual:\n%A" testCase v
+        | Some tr, None                 -> printfn "FAILED: Parse failed but expected to succeed: %s\Expected:\n%A" testCase tr
 
     0
 
