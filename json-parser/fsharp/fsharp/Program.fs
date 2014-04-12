@@ -150,6 +150,9 @@ module JsonParser =
     and (|JsonObject|_|) = jsonObject
 
     and jsonEscapedChar : Parser<char> = function
+        | Any ('"', ps) -> Some ('"' , ps)
+        | Any ('\\', ps)-> Some ('\\' , ps)
+        | Any ('/', ps) -> Some ('/' , ps)
         | Any ('b', ps) -> Some ('\b', ps)
         | Any ('f', ps) -> Some ('\f', ps)
         | Any ('n', ps) -> Some ('\r', ps)
