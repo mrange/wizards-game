@@ -140,12 +140,12 @@ module JsonParser =
     and (|JsonObject|_|) = jsonObject
 
     and jsonEscapedChar : Parser<char> = function
-        | Token 'b' (_, ps) -> Some ('\b', ps)
-        | Token 'f' (_, ps) -> Some ('\f', ps)
-        | Token 'n' (_, ps) -> Some ('\r', ps)
-        | Token 'r' (_, ps) -> Some ('\n', ps)
-        | Token 't' (_, ps) -> Some ('\t', ps)
-        | Token 'u' (_, HexDigit (d0, HexDigit (d1, HexDigit (d2, HexDigit (d3, ps))))) -> 
+        | Any ('b', ps) -> Some ('\b', ps)
+        | Any ('f', ps) -> Some ('\f', ps)
+        | Any ('n', ps) -> Some ('\r', ps)
+        | Any ('r', ps) -> Some ('\n', ps)
+        | Any ('t', ps) -> Some ('\t', ps)
+        | Any ('u', HexDigit (d0, HexDigit (d1, HexDigit (d2, HexDigit (d3, ps))))) -> 
             let ch = 
                 0x1000L*(hexDigitToInt64 d0)    +
                 0x0100L*(hexDigitToInt64 d1)    +
@@ -156,9 +156,9 @@ module JsonParser =
     and (|JsonEscapedChar|_|) = jsonEscapedChar
     
     and jsonChar : Parser<char> = function
-        | Token '"' (_, _)                      -> None
-        | Token '\\' (_, JsonEscapedChar pr)    -> Some pr
-        | Any pr                                -> Some pr
+        | Any ('"', _)                      -> None
+        | Any ('\\', JsonEscapedChar pr)    -> Some pr
+        | Any pr                            -> Some pr
         | _ -> None
     and (|JsonChar|_|) = jsonChar
 
@@ -183,8 +183,8 @@ module JsonParser =
         | Tokens "E-"   (_,ps)  -> Some (0.1, ps)
         | Tokens "e+"   (_,ps)  
         | Tokens "E+"   (_,ps)  
-        | Token 'e'     (_,ps)  
-        | Token 'E'     (_,ps)  -> Some (10., ps)
+        | Any           ('e',ps)  
+        | Any           ('e',ps)  -> Some (10., ps)
         | _ -> None
     and (|JsonExponent|_|) = jsonExponent
     
@@ -194,7 +194,7 @@ module JsonParser =
     and (|JsonExponentScale|_|) = jsonExponentScale
     
     and jsonFraction : Parser<float> = function 
-        | Token '.' (_, JsonInteger ((i,s), ps)) -> Some ((float i) * pown 0.1 s, ps)
+        | Any ('.', JsonInteger ((i,s), ps)) -> Some ((float i) * pown 0.1 s, ps)
         | ps -> Some (0., ps)
     and (|JsonFraction|_|) = jsonFraction
 
@@ -207,7 +207,7 @@ module JsonParser =
     and (|Json1To9|_|) = json1To9
 
     and jsonSign : Parser<float> = function 
-        | Token '-' (_,ps) -> Some (-1., ps)
+        | Any ('-',ps) -> Some (-1., ps)
         | ps -> Some (1., ps)
     and (|JsonSign|_|) = jsonSign
    
@@ -215,7 +215,7 @@ module JsonParser =
             sign * ((float d) * (pown 10. (int s)) + (float i) + f) * es
     
     and jsonNumber : Parser<float> = function
-        | JsonSign (sign, Token '0' (_, JsonFraction (f, JsonExponentScale (es, ps))))                      -> Some (makeNumber sign 0 1 0L f es, ps)
+        | JsonSign (sign, Any ('0', JsonFraction (f, JsonExponentScale (es, ps))))                      -> Some (makeNumber sign 0 1 0L f es, ps)
         | JsonSign (sign, Json1To9 (d, JsonInteger ((i,s), JsonFraction (f, JsonExponentScale (es, ps)))))  -> Some (makeNumber sign d s i f es, ps)
         | _ -> None
     and (|JsonNumber|_|) = jsonNumber
@@ -278,38 +278,4 @@ let main argv =
         | Some v -> printfn "%A" <| v
 
     0
-
-    (*
-    let satisfyAnyOf (anyOf: string)    = fun (c : char) -> anyOf.IndexOf(c) > -1
-    let anyOf (t: string) : Parser<char> = satisfy <| satisfyAnyOf t
-    let (|AnyOf|_|) = anyOf
-            
-    let inRange (inclusiveFrom: char, inclusiveTo: char) : Parser<char> = satisfy <| fun c -> c >= inclusiveFrom && c <= inclusiveTo 
-    let (|InRange|_|) = inRange
-            
-    let map ((|Parser|_|) : Parser<'P>) (m : 'P -> 'M) : Parser<'M> = function
-        | Parser (p, ps) -> Some ((m p, ps))
-        | _ -> None
-    let (|Map|_|) = map
-    let (>>!) = map
-
-    let combine ((|Left|_|) : Parser<'L>) ((|Right|_|) : Parser<'R>) : Parser<'L*'R> = function
-        | Left (l, Right (r, ps)) -> Some ((l,r), ps)
-        | _ -> None
-    let (|Combine|_|) = combine
-    let (.>>.) = combine
-
-    let keepLeft (l : Parser<'L>) (r : Parser<'R>) : Parser<'L> = l .>>. r >>! (fun (lv, _) -> lv)
-    let (|KeepLeft|_|) = keepLeft
-    let (.>>) = keepLeft
-
-    let keepRight (l : Parser<'L>) (r : Parser<'R>) : Parser<'R> = l .>>. r >>! (fun (_, rv) -> rv)
-    let (|KeepRight|_|) = keepRight
-    let (>>.) = keepRight
-
-    let opt ((|Element|_|) as element : Parser<'T>) : Parser<'T option> = function
-        | Element (v, ps)   -> Some (Some v, ps)
-        | ps -> Some (None, ps)
-    let (|Opt|_|) = opt
-    *)
 
