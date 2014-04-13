@@ -155,8 +155,8 @@ module JsonParser =
         | Any ('/', ps) -> Some ('/' , ps)
         | Any ('b', ps) -> Some ('\b', ps)
         | Any ('f', ps) -> Some ('\f', ps)
-        | Any ('n', ps) -> Some ('\r', ps)
-        | Any ('r', ps) -> Some ('\n', ps)
+        | Any ('n', ps) -> Some ('\n', ps)
+        | Any ('r', ps) -> Some ('\r', ps)
         | Any ('t', ps) -> Some ('\t', ps)
         | Any ('u', HexDigit (d0, HexDigit (d1, HexDigit (d2, HexDigit (d3, ps))))) -> 
             let ch = 
@@ -265,29 +265,63 @@ let main argv =
 
     let testCases = 
         [
-            """[1E2]"""                                         , Some <| Array [Number 100.]
-            """[1e+2]"""                                        , Some <| Array [Number 100.]
-            """[]"""                                            , Some <| Array []
-            """[false]"""                                       , Some <| Array [Boolean false]
-            """[1]"""                                           , Some <| Array [Number 1.]
-            """[0]"""                                           , Some <| Array [Number 0.]
-            """[-0]"""                                          , Some <| Array [Number 0.]
-            """[1]"""                                           , Some <| Array [Number 1.]
-            """[-1]"""                                          , Some <| Array [Number -1.]
-            """[01]"""                                          , None
-            """[-01]"""                                         , None
-            """[true,123 , null ,"Test\t", [true],{}]"""    , Some <| Array [Boolean true; Number 123.; Null; String "Test\t"; Array [Boolean true]; Object []]
-            """
-{ 
-    "test"  :null   ,
-    "beta"  :[]     , 
-    "alpha" : 
-    {
-        "inner":  "heart:\u2665"
-    }
-}"""                                                            , Some <| Object []
+            // Simple cases
+            """[]"""                , Some <| Array []
+            """[null]"""            , Some <| Array [Null]
+            """[true]"""            , Some <| Array [Boolean true]
+            """[false]"""           , Some <| Array [Boolean false]
+            """[""]"""              , Some <| Array [String ""]
+            """["Test"]"""          , Some <| Array [String "Test"]
+            """["Test\t"]"""        , Some <| Array [String "Test\t"]
+            """["\"\\\//\b\f\n\r\t\u0041"]"""    , Some <| Array [String "\"\\//\b\f\n\r\t\u0041"]
+            """[0]"""               , Some <| Array [Number 0.]
+            """[0.5]"""             , Some <| Array [Number 0.5]
+            """[1234]"""            , Some <| Array [Number 1234.]
+            """[-1234]"""           , Some <| Array [Number -1234.]
+            """[1234.25]"""         , Some <| Array [Number 1234.25]
+            """[-1234.25]"""        , Some <| Array [Number -1234.25]
+            """[1234.50E2]"""       , Some <| Array [Number 123450.]
+            """[-1234.5E+2]"""      , Some <| Array [Number -123450.]
+// TODO: Implement own comparer due to rounding issues
+//            """[123450E-2]"""   , Some <| Array [Number 1234.50]
+//            """[-123450e-2]"""  , Some <| Array [Number -1234.50]
+            """[null,false]"""      , Some <| Array [Null;Boolean false]
+            """[{}]"""              , Some <| Array [Object []]
+            """{}"""                , Some <| Object []
+            """{"a":null}"""        , Some <| Object ["a",Null]
+            """{"a":[]}"""          , Some <| Object ["a",Array []]
+            """{"a":[],"b":{}}"""   , Some <| Object ["a",Array [];"b",Object []]
+            // Whitespace cases
+            """ []"""               , Some <| Array []
+            """[] """               , Some <| Array []
+            """ [] """              , Some <| Array []
+            """[ true]"""           , Some <| Array [Boolean true]
+            """[true ]"""           , Some <| Array [Boolean true]
+            """[ true ]"""          , Some <| Array [Boolean true]
+            """[null, true]"""      , Some <| Array [Null;Boolean true]
+            """[null ,true]"""      , Some <| Array [Null;Boolean true]
+            """[null , true]"""     , Some <| Array [Null;Boolean true]
+            """ {}"""               , Some <| Object []
+            """{} """               , Some <| Object []
+            """ {} """              , Some <| Object []
+            """{ "a":true}"""       , Some <| Object ["a",Boolean true]
+            """{"a":true }"""       , Some <| Object ["a",Boolean true]
+            """{ "a":true }"""      , Some <| Object ["a",Boolean true]
+            """{"a" :true}"""       , Some <| Object ["a",Boolean true]
+            """{"a": true}"""       , Some <| Object ["a",Boolean true]
+            """{"a" : true}"""      , Some <| Object ["a",Boolean true]
+            """{"a":[] ,"b":{}}"""  , Some <| Object ["a",Array [];"b",Object []]
+            """{"a":[], "b":{}}"""  , Some <| Object ["a",Array [];"b",Object []]
+            """{"a":[] , "b":{}}""" , Some <| Object ["a",Array [];"b",Object []]
+            // Failure cases
+            """0"""             , None
+            """true"""          , None
+            """[,]"""           , None
+            """[true,]"""       , None
+            """[0123]"""        , None
+            // Complex cases
         ]
-    
+            
     for (testCase, testResult) in testCases do
         match testResult, JsonParser.parse testCase with
         | None, None                    -> ()
