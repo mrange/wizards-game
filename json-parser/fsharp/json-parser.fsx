@@ -111,17 +111,12 @@ module JsonParser =
         | Object    of (string*Json) list
         | Array     of Json list
 
-    let digitToInt64 ch =
+    let hexDigitToInt ch =
         match ch with
-        | _ when satisfyDigit ch    -> (int64 ch) - (int64 '0')
-        | _                         -> 0L
-
-    let hexDigitToInt64 ch =
-        match ch with
-        | _ when satisfyDigit ch        -> (int64 ch) - (int64 '0')
-        | _ when ch >= 'a' && ch <= 'f' -> (int64 ch) - (int64 'a') + 10L
-        | _ when ch >= 'A' && ch <= 'F' -> (int64 ch) - (int64 'A') + 10L
-        | _                             -> 0L
+        | _ when satisfyDigit ch        -> (int ch) - (int '0')
+        | _ when ch >= 'a' && ch <= 'f' -> (int ch) - (int 'a') + 10
+        | _ when ch >= 'A' && ch <= 'F' -> (int ch) - (int 'A') + 10
+        | _                             -> 0
 
     let wsToken ch : Parser<char> = function
         | Whitespaces (_, Token ch pr) -> Some pr
@@ -160,10 +155,10 @@ module JsonParser =
         | Any ('t', ps) -> Some ('\t', ps)
         | Any ('u', HexDigit (d0, HexDigit (d1, HexDigit (d2, HexDigit (d3, ps))))) ->
             let ch =
-                0x1000L*(hexDigitToInt64 d0)    +
-                0x0100L*(hexDigitToInt64 d1)    +
-                0x0010L*(hexDigitToInt64 d2)    +
-                0x0001L*(hexDigitToInt64 d3)
+                0x1000*(hexDigitToInt d0)    +
+                0x0100*(hexDigitToInt d1)    +
+                0x0010*(hexDigitToInt d2)    +
+                0x0001*(hexDigitToInt d3)
             Some ((char ch), ps)
         | _ -> None
     and (|JsonEscapedChar|_|) = jsonEscapedChar
@@ -184,7 +179,7 @@ module JsonParser =
         | Digits (ds, ps) ->
             let mutable result = 0L
             for ch in ds do
-                result <- 10L * result + (digitToInt64 ch)
+                result <- 10L * result + (ch |> hexDigitToInt |> int64)
             Some ((result,ds.Length),ps)
         | ps -> Some ((0L, 0),ps)
     and (|JsonInteger|_|) = jsonInteger
@@ -210,7 +205,7 @@ module JsonParser =
     and (|JsonFraction|_|) = jsonFraction
 
     and json1To9 : Parser<int> = function
-        | Digit1To9 (ch, ps) -> Some (int <| digitToInt64 ch, ps)
+        | Digit1To9 (ch, ps) -> Some (ch |> hexDigitToInt , ps)
         | _ -> None
     and (|Json1To9|_|) = json1To9
 
